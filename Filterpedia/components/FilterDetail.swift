@@ -22,6 +22,9 @@ import UIKit
 
 class FilterDetail: UIView
 {
+
+    var delegate: FilterDetailDelegate?
+
     let rect640x640 = CGRect(x: 0, y: 0, width: 640, height: 640)
     let activityIndicator = UIActivityIndicatorView(activityIndicatorStyle: .whiteLarge)
     
@@ -62,6 +65,14 @@ class FilterDetail: UIView
             for: .valueChanged)
         
         return toggle
+    }()
+
+    lazy var shareButton: UIButton = {
+        let button = UIButton()
+        button.setImage(UIImage(named: "share"), for: .normal)
+        button.addTarget(self, action: #selector(shareButtonClicked), for: .touchUpInside)
+
+        return button
     }()
     
     let histogramDisplay = HistogramDisplay()
@@ -157,6 +168,8 @@ class FilterDetail: UIView
         addSubview(histogramDisplay)
         
         addSubview(histogramToggleSwitch)
+
+        addSubview(shareButton)
         
         imageView.addSubview(activityIndicator)
         
@@ -171,6 +184,29 @@ class FilterDetail: UIView
     @objc func toggleHistogramView()
     {
        histogramDisplayHidden = !histogramToggleSwitch.isOn
+    }
+
+    @objc func shareButtonClicked() {
+        // text to share
+        var text = """
+        let filter = CIFilter(name: "\(filterName ?? "")")
+        """
+        for (key, value) in filterParameterValues {
+            text.append("\n")
+            if key == "inputImage" {
+                text.append("// filter.setValue(ciImage, forKey: \"\(key)\")")
+            } else {
+                text.append("filter.setValue(\(value), forKey: \"\(key)\")")
+            }
+        }
+
+        // set up activity view controller
+        let textToShare = [text]
+        let activityViewController = UIActivityViewController(activityItems: textToShare, applicationActivities: nil)
+        activityViewController.popoverPresentationController?.sourceView = shareButton.imageView
+
+        // present the view controller
+        delegate?.present(activityViewController)
     }
     
     func viewForZooming(in scrollView: UIScrollView) -> UIView? {
@@ -362,6 +398,13 @@ class FilterDetail: UIView
             y: 0,
             width: intrinsicContentSize.width,
             height: intrinsicContentSize.height)
+
+        shareButton.frame = CGRect(
+            x: frame.width - histogramToggleSwitch.intrinsicContentSize.width / 2 - 64 / 2,
+            y: histogramToggleSwitch.frame.height,
+            width: 64,
+            height: 64
+        )
         
         tableView.separatorStyle = UITableViewCellSeparatorStyle.none
         
@@ -431,4 +474,9 @@ extension FilterDetail: FilterInputItemRendererDelegate
     {
         return false
     }
+}
+
+protocol FilterDetailDelegate {
+
+    func present(_ vc: UIViewController)
 }

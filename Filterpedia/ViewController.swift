@@ -21,6 +21,7 @@ class ViewController: UIViewController
         view.addSubview(filterDetail)
         
         filterNavigator.delegate = self
+        filterDetail.delegate = self
     }
 
     override func viewDidLayoutSubviews()
@@ -42,5 +43,12 @@ extension ViewController: FilterNavigatorDelegate
     func filterNavigator(_ filterNavigator: FilterNavigator, didSelectFilterName: String)
     {
         filterDetail.filterName = didSelectFilterName
+    }
+}
+
+extension ViewController: FilterDetailDelegate {
+
+    func present(_ vc: UIViewController) {
+        self.present(vc, animated: true, completion: nil)
     }
 }
