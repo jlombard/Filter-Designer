@@ -194,9 +194,9 @@ class FilterDetail: UIView
         for (key, value) in filterParameterValues {
             text.append("\n")
             if key == "inputImage" {
-                text.append("// filter.setValue(ciImage, forKey: \"\(key)\")")
+                text.append("// filter?.setValue(ciImage, forKey: \"\(key)\")")
             } else {
-                text.append("filter.setValue(\(value), forKey: \"\(key)\")")
+                text.append("filter?.setValue(\(value), forKey: \"\(key)\")")
             }
         }
 
