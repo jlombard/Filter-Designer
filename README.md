@@ -1,5 +1,11 @@
-# Filterpedia
-Core Image Filter explorer
+# Filter-Designer
+Building on the Filterpedia and Filterpedia-Swift4 projects, Filter-Designer aims to make it easier for developers and designers to craft beautiful image filters.
+
+## Enhancements
+* A designer can fine-tune the parameters for a filter in Filter-Designer and then use the share icon to send a code snippet for developers to use in their app.
+
+
+# Filterpedia Readme
 
 ![screenshot](/Filterpedia/assets/screenshot.jpg)
 
