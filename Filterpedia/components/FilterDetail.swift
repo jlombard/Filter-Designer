@@ -196,6 +196,8 @@ class FilterDetail: UIView
             if key == "inputImage" {
                 text.append("// filter?.setValue(ciImage, forKey: \"\(key)\")")
             } else {
+                var value = "\(value)"
+                value = value.replacingOccurrences(of: " ", with: ", ")
                 text.append("filter?.setValue(\(value), forKey: \"\(key)\")")
             }
         }
