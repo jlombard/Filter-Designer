@@ -195,23 +195,42 @@ class FilterDetail: UIView
     }
 
     @objc func shareButtonClicked() {
+        var first = true
+        var lastFilterName = ""
+
         // text to share
         var text = ""
-        for filterName in filterNames {
+        for filter in currentFilters {
+            let name = "filter\(filter.filter.name)"
             text += """
-            // Filter \(filterName)
-            let filter = CIFilter(name: "\(filterName)")
+            // Filter \(filter.filter.name)
+            let \(name) = CIFilter(name: "\(filter.filter.name)")
             """
-//            for (key, value) in filterParameterValues {
-//                text.append("\n")
-//                if key == "inputImage" {
-//                    text.append("// filter?.setValue(ciImage, forKey: \"\(key)\")")
-//                } else {
-//                    var value = "\(value)"
-//                    value = value.replacingOccurrences(of: " ", with: ", ")
-//                    text.append("filter?.setValue(\(value), forKey: \"\(key)\")")
-//                }
-//            }
+
+            for (key, value) in filter.parameters.filter({ isIncluded in
+                if let _ = filter.filter.attributes[isIncluded.key] as? [String : AnyObject] {
+                    return true
+                } else {
+                    return false
+                }
+            }) {
+                text.append("\n")
+                if key == "inputImage" {
+                    if first {
+                        text.append("// \(name)?.setValue(originalImage, forKey: \"\(key)\")")
+                        first = false
+                    } else {
+                        text.append("\(name)?.setValue(\(lastFilterName)!.outputImage!, forKey: \"\(key)\")")
+                    }
+                } else if key == "defaultImage" {
+                } else {
+                    var value = "\(value)"
+                    value = value.replacingOccurrences(of: " ", with: ", ")
+                    text.append("\(name)?.setValue(\(value), forKey: \"\(key)\")")
+                }
+            }
+
+            lastFilterName = name
             text.append("\n\n")
         }
 
