@@ -200,20 +200,28 @@ class FilterDetail: UIView
 
         // text to share
         var text = ""
-        for filter in currentFilters {
-            let name = "filter\(filter.filter.name)"
+        for i in 0..<currentFilters.count {
+            let filter = currentFilters[i]
+
+            let name: String
+            if i == currentFilters.count - 1 {
+                name = "lastFilter"
+            } else {
+                name = "filter\(filter.filter.name)"
+            }
             text += """
             // Filter \(filter.filter.name)
             let \(name) = CIFilter(name: "\(filter.filter.name)")
             """
 
-            for (key, value) in filter.parameters.filter({ isIncluded in
+            let parameters = filter.parameters.filter({ isIncluded in
                 if let _ = filter.filter.attributes[isIncluded.key] as? [String : AnyObject] {
                     return true
                 } else {
                     return false
                 }
-            }) {
+            })
+            for (key, value) in parameters {
                 text.append("\n")
                 if key == "inputImage" {
                     if first {
