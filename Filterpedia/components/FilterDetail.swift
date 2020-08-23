@@ -231,6 +231,7 @@ class FilterDetail: UIView
                         text.append("\(name)?.setValue(\(lastFilterName)!.outputImage!, forKey: \"\(key)\")")
                     }
                 } else if key == "defaultImage" {
+                } else if value is CIImage {
                 } else {
                     var value = "\(value)"
                     value = value.replacingOccurrences(of: " ", with: ", ")
