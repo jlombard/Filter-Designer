@@ -81,6 +81,8 @@ class FilterNavigator: UIView
             tableView.reloadData()
         }
     }
+
+    var selectedFilterNames: Set<String> = []
     
     weak var delegate: FilterNavigatorDelegate?
     
@@ -110,6 +112,7 @@ class FilterNavigator: UIView
     @objc func segmentedControlChange()
     {
         mode = segmentedControl.selectedSegmentIndex == 0 ? .Grouped : .Flat
+        // ????????
     }
     
     override func layoutSubviews()
@@ -147,8 +150,16 @@ extension FilterNavigator: UITableViewDelegate
                 CIFilter.localizedName(forFilterName: $0) ?? $0 < CIFilter.localizedName(forFilterName: $1) ?? $1
             }[indexPath.row]
         }
-        
-        delegate?.filterNavigator(self, didSelectFilterName: filterName)
+
+        if selectedFilterNames.contains(filterName) {
+            selectedFilterNames.remove(filterName)
+            delegate?.filterNavigator(self, didRemoveFilterName: filterName)
+        } else {
+            selectedFilterNames.insert(filterName)
+            delegate?.filterNavigator(self, didSelectFilterName: filterName)
+        }
+
+        tableView.reloadData()
     }
     
     func tableView(_ tableView: UITableView, heightForHeaderInSection section: Int) -> CGFloat
@@ -239,6 +250,13 @@ extension FilterNavigator: UITableViewDataSource
         }
         
         cell.textLabel?.text = CIFilter.localizedName(forFilterName: filterName) ?? (CIFilter(name: filterName)?.attributes[kCIAttributeFilterDisplayName] as? String) ?? filterName
+
+        // The switch
+        let isOn = selectedFilterNames.contains(filterName)
+        let switchView = UISwitch(frame: .zero)
+        switchView.setOn(isOn, animated: true)
+        switchView.isEnabled = false
+        cell.accessoryView = switchView
         
         return cell
     }
@@ -257,5 +275,7 @@ enum FilterNavigatorMode: String
 protocol FilterNavigatorDelegate: class
 {
     func filterNavigator(_ filterNavigator: FilterNavigator, didSelectFilterName: String)
+
+    func filterNavigator(_ filterNavigator: FilterNavigator, didRemoveFilterName: String)
 }
 

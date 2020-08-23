@@ -116,6 +116,14 @@ class FilterDetail: UIView
     /// Whether the user has changed the filter whilst it's
     /// running in the background.
     var pending = false
+
+    /// The next filter to apply as an index of currentFilters
+    var nextFilter = 0
+
+    var defaultImage = assets.first!.ciImage
+
+    /// The last image with already applied filters
+    var lastImage: CIImage? = nil
     
     /// Whether a filter is currently running in the background
     var busy = false
@@ -133,7 +141,7 @@ class FilterDetail: UIView
         }
     }
     
-    var filterName: String?
+    var filterNames: [String] = []
     {
         didSet
         {
@@ -141,10 +149,10 @@ class FilterDetail: UIView
         }
     }
     
-    fileprivate var currentFilter: CIFilter?
+    fileprivate var currentFilters: [(filter: CIFilter, parameters: [String: AnyObject])] = []
     
     /// User defined filter parameter values
-    fileprivate var filterParameterValues: [String: AnyObject] = [kCIInputImageKey: assets.first!.ciImage]
+    // fileprivate var filterParameterValues: [String: AnyObject] = [kCIInputImageKey: assets.first!.ciImage]
     
     override init(frame: CGRect)
     {
@@ -188,18 +196,23 @@ class FilterDetail: UIView
 
     @objc func shareButtonClicked() {
         // text to share
-        var text = """
-        let filter = CIFilter(name: "\(filterName ?? "")")
-        """
-        for (key, value) in filterParameterValues {
-            text.append("\n")
-            if key == "inputImage" {
-                text.append("// filter?.setValue(ciImage, forKey: \"\(key)\")")
-            } else {
-                var value = "\(value)"
-                value = value.replacingOccurrences(of: " ", with: ", ")
-                text.append("filter?.setValue(\(value), forKey: \"\(key)\")")
-            }
+        var text = ""
+        for filterName in filterNames {
+            text += """
+            // Filter \(filterName)
+            let filter = CIFilter(name: "\(filterName)")
+            """
+//            for (key, value) in filterParameterValues {
+//                text.append("\n")
+//                if key == "inputImage" {
+//                    text.append("// filter?.setValue(ciImage, forKey: \"\(key)\")")
+//                } else {
+//                    var value = "\(value)"
+//                    value = value.replacingOccurrences(of: " ", with: ", ")
+//                    text.append("filter?.setValue(\(value), forKey: \"\(key)\")")
+//                }
+//            }
+            text.append("\n\n")
         }
 
         // set up activity view controller
@@ -217,27 +230,36 @@ class FilterDetail: UIView
     
     func updateFromFilterName()
     {
-        guard let filterName = filterName, let filter = CIFilter(name: filterName) else
-        {
-            return
-        }
-        
+        currentFilters = []
+
+        // ????????
+        // Remove old attributes
         imageView.subviews
             .filter({ $0 is FilterAttributesDisplayable})
             .forEach({ $0.removeFromSuperview() })
-        
-        if let widget = OverlayWidgets.getOverlayWidgetForFilter(filterName) as? UIView
-        {
-            imageView.addSubview(widget)
-            
-            widget.frame = imageView.bounds
+
+        for filterName in filterNames {
+            guard let filter = CIFilter(name: filterName) else
+            {
+                return
+            }
+
+            if var widget = OverlayWidgets.getOverlayWidgetForFilter(filterName)
+            {
+                widget.filterName = filterName
+                if let w = widget as? UIView {
+                    imageView.addSubview(w)
+                    w.frame = imageView.bounds
+                }
+            }
+
+            currentFilters.append((filter: filter, parameters: ["defaultImage": defaultImage]))
         }
-        
-        currentFilter = filter
+
         fixFilterParameterValues()
-        
+
         tableView.reloadData()
-        
+
         applyFilter()
     }
     
@@ -245,38 +267,41 @@ class FilterDetail: UIView
     /// filterParameterValues won't break the new filter.
     func fixFilterParameterValues()
     {
-        guard let currentFilter = currentFilter else
-        {
-            return
-        }
-        
-        let attributes = currentFilter.attributes
-        
-        for inputKey in currentFilter.inputKeys
-        {
-            if let attribute = attributes[inputKey] as? [String : AnyObject]
+        var newFilters: [(filter: CIFilter, parameters: [String: AnyObject])] = []
+
+        for var currentFilter in currentFilters {
+            let attributes = currentFilter.filter.attributes
+
+            for inputKey in currentFilter.filter.inputKeys
             {
-                // default image
-                if let className = attribute[kCIAttributeClass] as? String, className == "CIImage" && filterParameterValues[inputKey] == nil
+                if let attribute = attributes[inputKey] as? [String : AnyObject]
                 {
-                    filterParameterValues[inputKey] = assets.first!.ciImage
-                }
-                
-                // ensure previous values don't exceed kCIAttributeSliderMax for this filter
-                if let maxValue = attribute[kCIAttributeSliderMax] as? Float,
-                    let filterParameterValue = filterParameterValues[inputKey] as? Float, filterParameterValue > maxValue
-                {
-                    filterParameterValues[inputKey] = maxValue as AnyObject?
-                }
-                
-                // ensure vector is correct length
-                if let defaultVector = attribute[kCIAttributeDefault] as? CIVector,
-                    let filterParameterValue = filterParameterValues[inputKey] as? CIVector, defaultVector.count != filterParameterValue.count
-                {
-                    filterParameterValues[inputKey] = defaultVector
+                    // default image
+                    if let className = attribute[kCIAttributeClass] as? String, className == "CIImage" && currentFilter.parameters[inputKey] == nil
+                    {
+                        currentFilter.parameters[inputKey] = assets.first!.ciImage
+                    }
+
+                    // ensure previous values don't exceed kCIAttributeSliderMax for this filter
+                    if let maxValue = attribute[kCIAttributeSliderMax] as? Float,
+                        let filterParameterValue = currentFilter.parameters[inputKey] as? Float, filterParameterValue > maxValue
+                    {
+                        currentFilter.parameters[inputKey] = maxValue as AnyObject?
+                    }
+
+                    // ensure vector is correct length
+                    if let defaultVector = attribute[kCIAttributeDefault] as? CIVector,
+                        let filterParameterValue = currentFilter.parameters[inputKey] as? CIVector, defaultVector.count != filterParameterValue.count
+                    {
+                        currentFilter.parameters[inputKey] = defaultVector
+                    }
                 }
             }
+
+            newFilters.append(currentFilter)
         }
+
+        currentFilters = newFilters
     }
 
     func applyFilter()
@@ -287,16 +312,22 @@ class FilterDetail: UIView
             return
         }
         
-        guard let currentFilter = self.currentFilter else
+        guard let currentFilter = self.currentFilters[safe: nextFilter] else
         {
+            // For next apply...
+            nextFilter = 0
+            lastImage = nil
             return
         }
+        nextFilter += 1
         
         busy = true
         
         imageView.subviews
-            .filter({ $0 is FilterAttributesDisplayable})
-            .forEach({ ($0 as? FilterAttributesDisplayable)?.setFilter(currentFilter) })
+            .filter({ view in
+                return view is FilterAttributesDisplayable && (view as! FilterAttributesDisplayable).filterName == currentFilter.filter.name
+            })
+            .forEach({ ($0 as? FilterAttributesDisplayable)?.setFilter(currentFilter.filter) })
         
         let queue = currentFilter is VImageFilter ?
             DispatchQueue.main :
@@ -306,12 +337,20 @@ class FilterDetail: UIView
         {
             let startTime = CFAbsoluteTimeGetCurrent()
             
-            for (key, value) in self.filterParameterValues where currentFilter.inputKeys.contains(key)
+            for (key, value) in currentFilter.parameters where currentFilter.filter.inputKeys.contains(key)
             {
-                currentFilter.setValue(value, forKey: key)
+                currentFilter.filter.setValue(value, forKey: key)
             }
+            // ?????? Last one pls
+            let inputImage: CIImage
+            if let i = self.lastImage {
+                inputImage = i
+            } else {
+                inputImage = self.defaultImage
+            }
+            currentFilter.filter.setValue(inputImage, forKey: kCIInputImageKey)
             
-            let outputImage = currentFilter.outputImage!
+            let outputImage = currentFilter.filter.outputImage!
             let finalImage: CGImage
   
             let context = (currentFilter is MetalRenderable) ? self.ciMetalContext : self.ciOpenGLESContext
@@ -355,13 +394,19 @@ class FilterDetail: UIView
                 {
                     self.histogramDisplay.imageRef = finalImage
                 }
-                
-                self.imageView.image = UIImage(cgImage: finalImage)
+
+                let imImage = UIImage(cgImage: finalImage)
+                self.imageView.image = imImage
+                self.lastImage = CIImage(cgImage: finalImage)
                 self.busy = false
                 
                 if self.pending
                 {
                     self.pending = false
+                    self.nextFilter = 0
+                    self.applyFilter()
+                } else {
+                    // Apply the next filter. If none it will return
                     self.applyFilter()
                 }
             }
@@ -434,27 +479,37 @@ extension FilterDetail: UITableViewDelegate
 
 extension FilterDetail: UITableViewDataSource
 {
+
+    func numberOfSections(in tableView: UITableView) -> Int {
+        return currentFilters.count
+    }
+
     func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int
     {
-        return currentFilter?.inputKeys.count ?? 0
+        return currentFilters[section].filter.inputKeys.count
     }
     
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell
     {
         let cell = tableView.dequeueReusableCell(withIdentifier: "FilterInputItemRenderer",
             for: indexPath) as! FilterInputItemRenderer
- 
-        if let inputKey = currentFilter?.inputKeys[indexPath.row],
-            let attribute = currentFilter?.attributes[inputKey] as? [String : AnyObject]
+
+        let inputKey = currentFilters[indexPath.section].filter.inputKeys[indexPath.row]
+        if let attribute = currentFilters[indexPath.section].filter.attributes[inputKey] as? [String : AnyObject]
         {
             cell.detail = (inputKey: inputKey,
                 attribute: attribute,
-                filterParameterValues: filterParameterValues)
+                filterParameterValues: currentFilters[indexPath.section].parameters)
+            cell.section = currentFilters[indexPath.section].filter.name
         }
         
         cell.delegate = self
         
         return cell
+    }
+
+    func sectionIndexTitles(for tableView: UITableView) -> [String]? {
+        return currentFilters.map({ return $0.filter.name })
     }
 }
 
@@ -466,9 +521,37 @@ extension FilterDetail: FilterInputItemRendererDelegate
     {
         if let key = forKey, let value = didChangeValue
         {
-            filterParameterValues[key] = value
-            
-            applyFilter()
+            if key == kCIInputImageKey {
+                defaultImage = value as! CIImage
+
+                var newFilters: [(filter: CIFilter, parameters: [String: AnyObject])] = []
+
+                for var filter in currentFilters {
+                    filter.parameters["defaultImage"] = defaultImage
+                    newFilters.append(filter)
+                }
+
+                self.currentFilters = newFilters
+
+                applyFilter()
+            } else {
+                let section = filterInputItemRenderer.section
+                var newFilters: [(filter: CIFilter, parameters: [String: AnyObject])] = []
+
+                for i in 0..<currentFilters.count {
+                    var filter = currentFilters[i]
+
+                    if filter.filter.name == section {
+                        filter.parameters[key] = value
+                    }
+
+                    newFilters.append(filter)
+                }
+
+                self.currentFilters = newFilters
+
+                applyFilter()
+            }
         }
     }
     
@@ -481,4 +564,15 @@ extension FilterDetail: FilterInputItemRendererDelegate
 protocol FilterDetailDelegate {
 
     func present(_ vc: UIViewController)
+}
+
+extension Array {
+
+    subscript(safe safe: Int) -> Element? {
+        if safe >= count {
+            return nil
+        }
+
+        return self[safe]
+    }
 }

@@ -10,6 +10,8 @@ import UIKit
 
 protocol FilterAttributesDisplayable
 {
+    var filterName: String { get set }
+
     func setFilter(_ filter: CIFilter)
 }
 
@@ -38,6 +40,8 @@ class OverlayWidgets
 
 class ToneCurveWidget: UIView, FilterAttributesDisplayable
 {
+    var filterName: String = ""
+
     let toneCurveLayer = curveLayer(strokeColor: UIColor.white.cgColor)
     
     func setFilter(_ filter: CIFilter)
@@ -86,6 +90,9 @@ class ToneCurveWidget: UIView, FilterAttributesDisplayable
 
 class RGBChannelToneCurveWidget: UIView, FilterAttributesDisplayable
 {
+
+    var filterName: String = ""
+
     let redLayer: CAShapeLayer
     let greenLayer: CAShapeLayer
     let blueLayer: CAShapeLayer
@@ -158,6 +165,9 @@ class RGBChannelToneCurveWidget: UIView, FilterAttributesDisplayable
 
 class CMYKChannelToneCurveWidget: UIView, FilterAttributesDisplayable
 {
+
+    var filterName: String = ""
+
     let cyanLayer: CAShapeLayer
     let magentaLayer: CAShapeLayer
     let yellowLayer: CAShapeLayer

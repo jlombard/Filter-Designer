@@ -42,7 +42,19 @@ extension ViewController: FilterNavigatorDelegate
 {
     func filterNavigator(_ filterNavigator: FilterNavigator, didSelectFilterName: String)
     {
-        filterDetail.filterName = didSelectFilterName
+        filterDetail.filterNames.append(didSelectFilterName)
+    }
+
+    func filterNavigator(_ filterNavigator: FilterNavigator, didRemoveFilterName: String) {
+        var newFilterNames = [String]()
+
+        for name in filterDetail.filterNames {
+            if name != didRemoveFilterName {
+                newFilterNames.append(name)
+            }
+        }
+
+        filterDetail.filterNames = newFilterNames
     }
 }
 

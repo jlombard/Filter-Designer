@@ -72,7 +72,8 @@ class FilterInputItemRenderer: UITableViewCell
             attribute = detail.attribute
         }
     }
-   
+
+    var section: String = ""
     fileprivate var title: String = ""
     fileprivate var filterParameterValues = [String: AnyObject]()
     
@@ -247,7 +248,7 @@ class FilterInputItemRenderer: UITableViewCell
             vectorSlider.isHidden = true
             textEditButton.isHidden = true
             
-            imagesSegmentedControl.selectedSegmentIndex = assets.index(where: { $0.ciImage == filterParameterValues[inputKey] as? CIImage}) ?? 0
+            imagesSegmentedControl.selectedSegmentIndex = assets.index(where: { $0.ciImage == filterParameterValues["defaultImage"] as? CIImage}) ?? 0
             
             imagesSegmentedControlChangeHandler()
             
