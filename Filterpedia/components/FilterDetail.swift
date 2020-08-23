@@ -265,6 +265,10 @@ class FilterDetail: UIView
             .filter({ $0 is FilterAttributesDisplayable})
             .forEach({ $0.removeFromSuperview() })
 
+        if filterNames.count == 0 {
+            imageView.image = nil
+        }
+
         for filterName in filterNames {
             guard let filter = CIFilter(name: filterName) else
             {
