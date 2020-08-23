@@ -258,6 +258,7 @@ class FilterDetail: UIView
     
     func updateFromFilterName()
     {
+        let oldFilters = currentFilters
         currentFilters = []
 
         // ????????
@@ -285,7 +286,9 @@ class FilterDetail: UIView
                 }
             }
 
-            currentFilters.append((filter: filter, parameters: ["defaultImage": defaultImage]))
+            var parameters = oldFilters.first(where: { $0.filter.name == filter.name })?.parameters ?? [:]
+            parameters["defaultImage"] = defaultImage
+            currentFilters.append((filter: filter, parameters: parameters))
         }
 
         fixFilterParameterValues()
