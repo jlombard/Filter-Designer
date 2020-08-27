@@ -225,7 +225,8 @@ class FilterDetail: UIView
                 text.append("\n")
                 if key == "inputImage" {
                     if first {
-                        text.append("// \(name)?.setValue(originalImage, forKey: \"\(key)\")")
+                        text.append("// Please replace originalImage with your own input CIImage")
+                        text.append("\(name)?.setValue(originalImage, forKey: \"\(key)\")")
                         first = false
                     } else {
                         text.append("\(name)?.setValue(\(lastFilterName)!.outputImage!, forKey: \"\(key)\")")
