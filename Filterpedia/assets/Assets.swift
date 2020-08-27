@@ -37,4 +37,4 @@ let assets = [
     NamedImage(name: "Gradient", ciImage: gradientImage!)
 ]
 
-let assetLabels = assets.map({ $0.name })
+let assetLabels = assets.map({ $0.name }) + ["Custom"]

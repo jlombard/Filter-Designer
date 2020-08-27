@@ -372,24 +372,34 @@ class FilterDetail: UIView
         queue.async
         {
             let startTime = CFAbsoluteTimeGetCurrent()
+
+            let context = (currentFilter is MetalRenderable) ? self.ciMetalContext : self.ciOpenGLESContext
             
             for (key, value) in currentFilter.parameters where currentFilter.filter.inputKeys.contains(key)
             {
                 currentFilter.filter.setValue(value, forKey: key)
             }
+
+            // Method to resize image
+            func resize(image: UIImage, toScaleSize:CGSize) -> UIImage {
+                UIGraphicsBeginImageContextWithOptions(toScaleSize, true, image.scale)
+                image.draw(in: CGRect(x: 0, y: 0, width: toScaleSize.width, height: toScaleSize.height))
+                let scaledImage = UIGraphicsGetImageFromCurrentImageContext()
+                UIGraphicsEndImageContext()
+                return scaledImage!
+            }
+
             // ?????? Last one pls
             let inputImage: CIImage
             if let i = self.lastImage {
                 inputImage = i
             } else {
-                inputImage = self.defaultImage
+                inputImage = CIImage(cgImage: resize(image: UIImage(ciImage: self.defaultImage), toScaleSize: CGSize(width: 640, height: 640)).cgImage!)
             }
             currentFilter.filter.setValue(inputImage, forKey: kCIInputImageKey)
             
             let outputImage = currentFilter.filter.outputImage!
             let finalImage: CGImage
-  
-            let context = (currentFilter is MetalRenderable) ? self.ciMetalContext : self.ciOpenGLESContext
             
             if outputImage.extent.width == 1 || outputImage.extent.height == 1
             {
@@ -589,6 +599,10 @@ extension FilterDetail: FilterInputItemRendererDelegate
                 applyFilter()
             }
         }
+    }
+
+    func showImagePicker(imagePicker: UIImagePickerController) {
+        delegate?.present(imagePicker)
     }
     
     func tableView(_ tableView: UITableView, shouldHighlightRowAt indexPath: IndexPath) -> Bool

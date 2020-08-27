@@ -27,6 +27,8 @@ class FilterInputItemRenderer: UITableViewCell
     let slider = LabelledSlider()
     let vectorSlider = VectorSlider()
     let imagesSegmentedControl = UISegmentedControl(items: assetLabels)
+
+    let imagePicker = UIImagePickerController()
     
     let titleLabel = UILabel()
     
@@ -178,7 +180,19 @@ class FilterInputItemRenderer: UITableViewCell
     
     @objc func imagesSegmentedControlChangeHandler()
     {
-        value = assets[imagesSegmentedControl.selectedSegmentIndex].ciImage
+        if imagesSegmentedControl.selectedSegmentIndex >= assets.count {
+            // Set a custom image
+            imagePicker.delegate = self
+            imagePicker.sourceType = .savedPhotosAlbum
+            imagePicker.allowsEditing = false
+            if #available(iOS 13.0, *) {
+                imagePicker.isModalInPresentation = true
+            }
+
+            delegate?.showImagePicker(imagePicker: imagePicker)
+        } else {
+            value = assets[imagesSegmentedControl.selectedSegmentIndex].ciImage
+        }
     }
     
     @objc func textEditClicked()
@@ -248,9 +262,9 @@ class FilterInputItemRenderer: UITableViewCell
             vectorSlider.isHidden = true
             textEditButton.isHidden = true
             
-            imagesSegmentedControl.selectedSegmentIndex = assets.index(where: { $0.ciImage == filterParameterValues["defaultImage"] as? CIImage}) ?? 0
+            imagesSegmentedControl.selectedSegmentIndex = assets.index(where: { $0.ciImage == filterParameterValues["defaultImage"] as? CIImage}) ?? assets.count
             
-            imagesSegmentedControlChangeHandler()
+            // imagesSegmentedControlChangeHandler()
             
         case "CIVector":
             slider.isHidden = true
@@ -317,4 +331,29 @@ class FilterInputItemRenderer: UITableViewCell
 protocol FilterInputItemRendererDelegate: class
 {
     func filterInputItemRenderer(_ filterInputItemRenderer: FilterInputItemRenderer, didChangeValue: AnyObject?, forKey: String?)
+
+    func showImagePicker(imagePicker: UIImagePickerController)
+}
+
+// MARK: - Custom Image Picker
+
+extension FilterInputItemRenderer: UIImagePickerControllerDelegate {
+
+    func imagePickerController(_ picker: UIImagePickerController, didFinishPickingMediaWithInfo info: [String: Any]) {
+        picker.dismiss(animated: true) {
+            if let pickedImage = (info[UIImagePickerControllerOriginalImage] as? UIImage)?.cgImage {
+                self.value = CIImage(cgImage: pickedImage)
+            }
+        }
+    }
+
+    func imagePickerControllerDidCancel(_ picker: UIImagePickerController) {
+        picker.dismiss(animated: true) {
+            self.imagesSegmentedControl.selectedSegmentIndex = 0
+            self.imagesSegmentedControlChangeHandler()
+        }
+    }
+}
+
+extension FilterInputItemRenderer: UINavigationControllerDelegate {
 }
