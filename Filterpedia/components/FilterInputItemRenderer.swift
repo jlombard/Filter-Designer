@@ -263,7 +263,8 @@ class FilterInputItemRenderer: UITableViewCell
             textEditButton.isHidden = true
             
             imagesSegmentedControl.selectedSegmentIndex = assets.index(where: { $0.ciImage == filterParameterValues["defaultImage"] as? CIImage}) ?? assets.count
-            
+
+            // ????????
             // imagesSegmentedControlChangeHandler()
             
         case "CIVector":
