@@ -233,6 +233,8 @@ class FilterDetail: UIView
                     }
                 } else if key == "defaultImage" {
                 } else if value is CIImage {
+                    text.append("// Please replace secondaryImage with your own input CIImage\n")
+                    text.append("\(name)?.setValue(secondaryImage, forKey: \"\(key)\")")
                 } else {
                     var value = "\(value)"
                     value = value.replacingOccurrences(of: " ", with: ", ")
