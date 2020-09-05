@@ -240,7 +240,7 @@ class FilterDetail: UIView
             if i == currentFilters.count - 1 {
                 name = "lastFilter"
             } else {
-                name = "filter\(filter.filter.name)"
+                name = "filter\(filter.filter.name.replacingOccurrences(of: ".", with: ""))"
             }
             text += """
             // Filter \(filter.filter.name)
