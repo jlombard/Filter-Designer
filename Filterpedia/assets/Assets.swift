@@ -26,7 +26,7 @@ let gradientImage = CIFilter(
     .outputImage?
     .cropped(to: CGRect(x: 0, y: 0, width: 640, height: 640))
 
-let assets = [
+var assets = [
     NamedImage(name: "Mona Lisa", ciImage: CIImage(image: UIImage(named: "monalisa.jpg")!)!),
     NamedImage(name: "Stop", ciImage: CIImage(image: UIImage(named: "stop.jpg")!)!),
     NamedImage(name: "Sunflower", ciImage: CIImage(image: UIImage(named: "sunflower.jpg")!)!),
@@ -37,4 +37,6 @@ let assets = [
     NamedImage(name: "Gradient", ciImage: gradientImage!)
 ]
 
-let assetLabels = assets.map({ $0.name }) + ["Custom"]
+var assetLabels: [String] {
+    return assets.map({ $0.name }) + ["Custom"]
+}

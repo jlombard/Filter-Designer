@@ -19,6 +19,7 @@
 //  along with this program.  If not, see <http://www.gnu.org/licenses/>
 
 import UIKit
+import Photos
 
 class FilterDetail: UIView
 {
@@ -74,6 +75,17 @@ class FilterDetail: UIView
 
         return button
     }()
+
+    lazy var customImageButton: UIButton = {
+        let button = UIButton()
+        button.setImage(UIImage(named: "baseline_insert_photo_black_24pt"), for: .normal)
+        button.addTarget(self, action: #selector(customImageButtonClicked), for: .touchUpInside)
+        button.tintColor = .black
+
+        return button
+    }()
+    var selectedCustomImageChangeId = -1
+    let imagePicker = UIImagePickerController()
     
     let histogramDisplay = HistogramDisplay()
     
@@ -178,6 +190,7 @@ class FilterDetail: UIView
         addSubview(histogramToggleSwitch)
 
         addSubview(shareButton)
+        addSubview(customImageButton)
         
         imageView.addSubview(activityIndicator)
         
@@ -200,6 +213,26 @@ class FilterDetail: UIView
 
         // text to share
         var text = ""
+
+        // First of all, add a comment with the file name that was used
+        let cells = tableView.visibleCells.compactMap({ return $0 as? FilterInputItemRenderer })
+
+        var cell: FilterInputItemRenderer? = nil
+        for c in cells {
+            if c.attribute[kCIAttributeClass] as? String == "CIImage" {
+                cell = c
+                break
+            }
+        }
+        var imageName = "Default.jpg"
+        if let c = cell {
+            imageName = assetLabels[safe: c.imagesSegmentedControl.selectedSegmentIndex] ?? "Default.jpg"
+        }
+
+        text += "// The image used in this shared snipped was named \(imageName)\n\n"
+
+        // Next, add all filters
+
         for i in 0..<currentFilters.count {
             let filter = currentFilters[i]
 
@@ -253,6 +286,40 @@ class FilterDetail: UIView
 
         // present the view controller
         delegate?.present(activityViewController)
+    }
+
+    @objc func customImageButtonClicked() {
+        let cells = tableView.visibleCells
+
+        guard cells.count > 0 else {
+            return
+        }
+
+        let filterCells = cells.compactMap({ return $0 as? FilterInputItemRenderer })
+
+        var cell: FilterInputItemRenderer? = nil
+        for c in filterCells {
+            if c.attribute[kCIAttributeClass] as? String == "CIImage" {
+                cell = c
+                break
+            }
+        }
+
+        guard let c = cell, c.imagesSegmentedControl.selectedSegmentIndex < assets.count else {
+            return
+        }
+
+        selectedCustomImageChangeId = c.imagesSegmentedControl.selectedSegmentIndex
+
+        // Set a custom image
+        imagePicker.delegate = self
+        imagePicker.sourceType = .savedPhotosAlbum
+        imagePicker.allowsEditing = false
+        if #available(iOS 13.0, *) {
+            imagePicker.isModalInPresentation = true
+        }
+
+        delegate?.present(imagePicker)
     }
     
     func viewForZooming(in scrollView: UIScrollView) -> UIView? {
@@ -500,6 +567,12 @@ class FilterDetail: UIView
             width: 64,
             height: 64
         )
+        customImageButton.frame = CGRect(
+            x: frame.width - histogramToggleSwitch.intrinsicContentSize.width / 2 - 64 / 2,
+            y: histogramToggleSwitch.frame.height + shareButton.frame.height - 16,
+            width: 64,
+            height: 64
+        )
         
         tableView.separatorStyle = UITableViewCellSeparatorStyle.none
         
@@ -627,4 +700,62 @@ extension Array {
 
         return self[safe]
     }
+}
+
+// MARK: - Custom Image Picker
+
+extension FilterDetail: UIImagePickerControllerDelegate {
+
+    func imagePickerController(_ picker: UIImagePickerController, didFinishPickingMediaWithInfo info: [String: Any]) {
+        picker.dismiss(animated: true) {
+            if let pickedImage = info[UIImagePickerControllerOriginalImage] as? UIImage {
+                // Get Image name
+                let imageURL = info[UIImagePickerControllerImageURL] as? URL
+                let name = imageURL?.lastPathComponent ?? "Default.jpg"
+
+                let ciImage = CIImage(image: pickedImage)!
+                let namedImage = NamedImage(name: name, ciImage: ciImage)
+
+                assets[self.selectedCustomImageChangeId] = namedImage
+
+                // Set image and apply filter
+
+                self.defaultImage = ciImage
+
+                var newFilters: [(filter: CIFilter, parameters: [String: AnyObject])] = []
+
+                for var filter in self.currentFilters {
+                    filter.parameters["defaultImage"] = self.defaultImage
+                    newFilters.append(filter)
+                }
+
+                self.currentFilters = newFilters
+
+                self.applyFilter()
+
+                // Set Segment labels
+
+                let cells = self.tableView.visibleCells
+
+                for c in cells.compactMap({ return $0 as? FilterInputItemRenderer }) {
+                    if c.attribute[kCIAttributeClass] as? String == "CIImage" {
+                        c.imagesSegmentedControl.setTitle(name, forSegmentAt: self.selectedCustomImageChangeId)
+                    }
+                }
+
+                // Reset
+
+                self.selectedCustomImageChangeId = -1
+            }
+        }
+    }
+
+    func imagePickerControllerDidCancel(_ picker: UIImagePickerController) {
+        picker.dismiss(animated: true) {
+            self.selectedCustomImageChangeId = -1
+        }
+    }
+}
+
+extension FilterDetail: UINavigationControllerDelegate {
 }
