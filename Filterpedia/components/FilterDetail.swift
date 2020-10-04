@@ -113,6 +113,8 @@ class FilterDetail: UIView
         
         imageView.layer.borderColor = UIColor.gray.cgColor
         imageView.layer.borderWidth = 1
+
+        imageView.contentMode = .center
         
         return imageView
     }()
@@ -463,7 +465,8 @@ class FilterDetail: UIView
             if let i = self.lastImage {
                 inputImage = i
             } else {
-                inputImage = CIImage(cgImage: resize(image: UIImage(ciImage: self.defaultImage), toScaleSize: CGSize(width: 640, height: 640)).cgImage!)
+                inputImage = CIImage(cgImage: resize(image: UIImage(ciImage: self.defaultImage), toScaleSize: CGSize(width: 600, height: 600)).cgImage!)
+                // inputImage = UIImage(ciImage: self.defaultImage).ciImage!
             }
             currentFilter.filter.setValue(inputImage, forKey: kCIInputImageKey)
             
