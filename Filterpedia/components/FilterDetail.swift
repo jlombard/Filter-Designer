@@ -246,7 +246,7 @@ class FilterDetail: UIView
             }
             text += """
             // Filter \(filter.filter.name)
-            let \(name) = CIFilter(name: "\(filter.filter.name)")
+            let \(name) = CIFilter(name: "\(filter.filter.name.replacingOccurrences(of: "Filterpedia.", with: ""))")
             """
 
             let parameters = filter.parameters.filter({ isIncluded in
